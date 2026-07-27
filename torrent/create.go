@@ -179,6 +179,10 @@ func CreateTorrent(opts CreateOptions) (*Torrent, error) {
 		// preserve the folder name even for single-file torrents
 		name = filepath.Base(filepath.Clean(path))
 	}
+	// the name has to resolve on a byte-exact filesystem just like the entries
+	// in info.files do: it is the filename for a single-file torrent and the
+	// root folder for a multi-file one
+	name = nfcPath(filepath.Dir(filepath.Clean(path)), name)
 
 	mi := &metainfo.MetaInfo{
 		Comment: opts.Comment,
@@ -392,6 +396,7 @@ func CreateTorrent(opts CreateOptions) (*Torrent, error) {
 					originalFilepath = files[0].path // Fallback if mapping missing
 				}
 				relPath, _ := filepath.Rel(baseDir, originalFilepath)
+				relPath = nfcPath(baseDir, relPath)
 				pathComponents := strings.Split(filepath.ToSlash(relPath), "/") // Ensure forward slashes
 				info.Files[0] = metainfo.FileInfo{
 					Path:   pathComponents,
@@ -410,6 +415,7 @@ func CreateTorrent(opts CreateOptions) (*Torrent, error) {
 					originalFilepath = f.path // Fallback if mapping missing
 				}
 				relPath, _ := filepath.Rel(baseDir, originalFilepath)
+				relPath = nfcPath(baseDir, relPath)
 				pathComponents := strings.Split(filepath.ToSlash(relPath), "/") // Ensure forward slashes
 				info.Files[i] = metainfo.FileInfo{
 					Path:   pathComponents,
