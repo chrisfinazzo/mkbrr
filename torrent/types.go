@@ -38,6 +38,7 @@ type CreateOptions struct {
 	InfoOnly                bool
 	SkipPrefix              bool
 	FailOnSeasonPackWarning bool
+
 	// ProgressCallback is called during hashing to report progress.
 	// If nil, no progress callbacks will be made.
 	ProgressCallback ProgressCallback
@@ -57,9 +58,10 @@ type FileEntry struct {
 
 // internal file entry for processing
 type fileEntry struct {
-	path   string
-	length int64
-	offset int64
+	path       string
+	sourcePath string
+	length     int64
+	offset     int64
 }
 
 // internal file reader for processing

@@ -63,6 +63,8 @@ mkbrr create path/to/file -t https://example-tracker.com/announce -e
 - [Usage](#usage)
   - [Creating Torrents](#creating-torrents)
   - [Inspecting Torrents](#inspecting-torrents)
+  - [Checking Torrents](#checking-torrents-verifying-data)
+  - [Updating Torrents](#updating-torrents)
   - [Modifying Torrents](#modifying-torrents)
 - [Advanced Usage](#advanced-usage)
   - [Preset Mode](#preset-mode)
@@ -287,6 +289,37 @@ This shows:
 - Creation date
 - Magnet link
 - File list (for multi-file torrents)
+
+### Updating Torrents
+
+Structurally sync a v1 torrent after files are added, removed, resized, or renamed without rehashing files assumed to be unchanged:
+
+```bash
+# Write release.updated.torrent and leave release.torrent untouched
+mkbrr update-torrent release.torrent /path/to/release
+
+# Explicitly replace the input torrent
+mkbrr update-torrent release.torrent /path/to/release --in-place
+
+# Choose a different output file
+mkbrr update-torrent release.torrent /path/to/release --output updated.torrent
+
+# Reuse the same folder and filters from the original create command
+mkbrr update-torrent /home/ubuntu/manga-no-images.torrent /home/ubuntu/manga \
+  --exclude "*.jpg,*.jpeg,*.png,*.pdf,*.gif,*.webp,*.bmp"
+
+# Reuse hashes for a known file rename
+mkbrr update-torrent release.torrent /path/to/release \
+  --rename old-name.mkv=new-name.mkv
+```
+
+**Important:** This is a structural sync, not content-change detection. Files with matching paths and sizes are assumed to have identical bytes and are not rehashed. If an existing file may have been edited or replaced without changing its size, run `create` again to perform a full rehash. You can run `check` after updating to validate the torrent against the files on disk.
+
+Removed files disappear from the torrent, while new files and resized files are hashed. An unmapped rename is treated safely as a deletion plus an addition and is rehashed; use repeatable `--rename old=new` mappings only when you know a renamed file is unchanged and want to reuse its hashes. Pieces containing new data or changed boundaries are rehashed, while structurally matching old piece ranges reuse their existing hashes.
+
+The default output adds `.updated` before the input extension and leaves the original torrent untouched; it refuses to overwrite an existing default output. Use `--output` to choose a different destination or `--in-place` to replace the input atomically. Output may not replace a content file or be written inside the content directory; therefore, the input torrent used with `--in-place` must also live outside that directory. As a wrong content path can otherwise look like a complete replacement, a multi-piece update that reuses no hashes is rejected; after verifying the content path, pass `--force` to allow that full rehash.
+
+The update command uses the same `--exclude` and `--include` syntax as `create`. Repeat those filters because glob patterns are not stored in a torrent file. Tracker URLs, creation date, creator, private/source fields, per-file custom fields, unknown root keys, and piece length are preserved from the existing torrent, so they do not need to be supplied again. Running `create` again would perform a full rehash.
 
 ### Modifying Torrents
 

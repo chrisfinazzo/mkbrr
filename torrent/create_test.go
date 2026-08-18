@@ -11,9 +11,65 @@ import (
 	"testing"
 
 	"github.com/autobrr/go-torrent/metainfo"
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 
 	"github.com/autobrr/mkbrr/internal/preset"
 )
+
+func TestPieceCountForSizeHandlesIntegerBoundaries(t *testing.T) {
+	tests := []struct {
+		name        string
+		totalSize   int64
+		pieceLength int64
+		want        int
+		wantErr     bool
+	}{
+		{name: "maximum piece length", totalSize: 2, pieceLength: maxTorrentDataSize, want: 1},
+		{name: "excessive piece count", totalSize: maxTorrentDataSize, pieceLength: 1, wantErr: true},
+		{name: "negative total size", totalSize: -1, pieceLength: 1, wantErr: true},
+	}
+
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			got, err := pieceCountForSize(test.totalSize, test.pieceLength)
+			if test.wantErr {
+				require.Error(t, err)
+				return
+			}
+
+			require.NoError(t, err)
+			assert.Equal(t, test.want, got)
+		})
+	}
+}
+
+func TestAddTorrentFileSizeRejectsOverflow(t *testing.T) {
+	tests := []struct {
+		name      string
+		totalSize int64
+		fileSize  int64
+		want      int64
+		wantErr   bool
+	}{
+		{name: "maximum total size", totalSize: maxTorrentDataSize - 1, fileSize: 1, want: maxTorrentDataSize},
+		{name: "overflow", totalSize: maxTorrentDataSize, fileSize: 1, wantErr: true},
+		{name: "negative file size", totalSize: 0, fileSize: -1, wantErr: true},
+	}
+
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			got, err := addTorrentFileSize(test.totalSize, test.fileSize)
+			if test.wantErr {
+				require.Error(t, err)
+				return
+			}
+
+			require.NoError(t, err)
+			assert.Equal(t, test.want, got)
+		})
+	}
+}
 
 func Test_calculatePieceLength(t *testing.T) {
 	tests := []struct {
